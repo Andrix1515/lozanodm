@@ -1,1 +1,3 @@
-# Package initializer for robot adapters
+from robot.coppelia import NiryoOneRobot
+
+__all__ = ["NiryoOneRobot"]
