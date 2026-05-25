@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Control Cobots | NiryoOne</title>
+    <link rel="stylesheet" href="/static/style.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <h1>Controlador Web NiryoOne</h1>
+        <p>Interfaz profesional para manipular cada grado de libertad del robot.</p>
+      </div>
+      <div class="status-pill" id="connection-status">Conectando...</div>
+    </header>
+
+    <main class="container">
+      <section class="card status-card">
+        <h2>Estado del robot</h2>
+        <div class="status-grid">
+          <div>
+            <span class="label">Conexión</span>
+            <strong id="connected">-</strong>
+          </div>
+          <div>
+            <span class="label">Gripper</span>
+            <strong id="gripper-state">-</strong>
+          </div>
+          <div>
+            <span class="label">Último error</span>
+            <strong id="last-error">Ninguno</strong>
+          </div>
+          <div>
+            <span class="label">Actualizado</span>
+            <strong id="last-update">-</strong>
+          </div>
+        </div>
+        <div class="button-row">
+          <button id="refresh-button" class="primary">Sincronizar</button>
+          <button id="home-button" class="secondary">Enviar HOME</button>
+        </div>
+      </section>
+
+      <section class="card control-card">
+        <h2>Control de juntas</h2>
+        <div id="joint-controls" class="joint-grid"></div>
+        <div class="button-row">
+          <button id="move-button" class="primary">Mover al objetivo</button>
+          <button id="sync-button" class="secondary">Actualizar valores</button>
+        </div>
+      </section>
+
+      <section class="card gripper-card">
+        <h2>Pinza / Comandos rápidos</h2>
+        <div class="button-row">
+          <button id="open-button" class="primary">Abrir pinza</button>
+          <button id="close-button" class="danger">Cerrar pinza</button>
+        </div>
+        <div class="info-box">
+          Usa los controles de junta para mover cada DOF. Envía HOME cuando necesites posición segura.
+        </div>
+      </section>
+    </main>
+
+    <script src="/static/app.js"></script>
+  </body>
+</html>
