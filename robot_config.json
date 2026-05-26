@@ -1,0 +1,299 @@
+{
+    "robot_name": "AutoExtractedRobot",
+    "joints": [
+        {
+            "name": "base_joint",
+            "type": "revolute",
+            "parent": "NiryoOne",
+            "position_world": {
+                "x": 0.2499211356043828,
+                "y": -0.537036326341331,
+                "z": 0.09499996900558472
+            },
+            "orientation_world_deg": {
+                "x": -0.0,
+                "y": 0.0,
+                "z": -179.99999999998823
+            },
+            "limits": {
+                "cyclic": false,
+                "min": -174.99999234780518,
+                "max": 174.99999234780518
+            },
+            "current_position": 0.0
+        },
+        {
+            "name": "shoulder_joint",
+            "type": "revolute",
+            "parent": "Link",
+            "position_world": {
+                "x": 0.24992113560438284,
+                "y": -0.5373510239645839,
+                "z": 0.18299034237861633
+            },
+            "orientation_world_deg": {
+                "x": 0.0,
+                "y": -89.99999509544381,
+                "z": 0.0
+            },
+            "limits": {
+                "cyclic": false,
+                "min": -90.00000250447816,
+                "max": 36.69999293888002
+            },
+            "current_position": 0.0
+        },
+        {
+            "name": "elbow_joint",
+            "type": "revolute",
+            "parent": "Link",
+            "position_world": {
+                "x": 0.24992115087203107,
+                "y": -0.5373542454754733,
+                "z": 0.3930472885586039
+            },
+            "orientation_world_deg": {
+                "x": 0.0,
+                "y": -89.99999231603718,
+                "z": 9.999999094436573
+            },
+            "limits": {
+                "cyclic": false,
+                "min": -79.99999767274336,
+                "max": 89.999995674289
+            },
+            "current_position": 0.0
+        },
+        {
+            "name": "forearm_roll_joint",
+            "type": "revolute",
+            "parent": "Link",
+            "position_world": {
+                "x": 0.24930326090561,
+                "y": -0.6255744734669209,
+                "z": 0.439018030216816
+            },
+            "orientation_world_deg": {
+                "x": 79.99999124621793,
+                "y": -2.294462961093698e-08,
+                "z": 90.00000578334092
+            },
+            "limits": {
+                "cyclic": false,
+                "min": -174.99999234780518,
+                "max": 174.99999234780518
+            },
+            "current_position": 0.0
+        },
+        {
+            "name": "wrist_pitch_joint",
+            "type": "revolute",
+            "parent": "Link",
+            "position_world": {
+                "x": 0.24882459275281008,
+                "y": -0.750244000335885,
+                "z": 0.4603732577883906
+            },
+            "orientation_world_deg": {
+                "x": -10.000003744826149,
+                "y": -5.783341775026199e-06,
+                "z": 4.999990317710693
+            },
+            "limits": {
+                "cyclic": false,
+                "min": -100.0000005060238,
+                "max": 109.99999850756943
+            },
+            "current_position": 0.0
+        },
+        {
+            "name": "tool_roll_joint",
+            "type": "revolute",
+            "parent": "Link",
+            "position_world": {
+                "x": 0.24699321369153204,
+                "y": -0.7241134040024662,
+                "z": 0.4563931191472014
+            },
+            "orientation_world_deg": {
+                "x": 79.99999072120595,
+                "y": 4.998512437722697,
+                "z": 70.00001024489549
+            },
+            "limits": {
+                "cyclic": false,
+                "min": -147.4999978435547,
+                "max": 147.4999978435547
+            },
+            "current_position": 0.0
+        },
+        {
+            "name": "leftJoint1",
+            "type": "revolute",
+            "parent": "NiryoLGripper",
+            "position_world": {
+                "x": 0.25578594707650015,
+                "y": -0.7983645820742811,
+                "z": 0.45778517472362906
+            },
+            "orientation_world_deg": {
+                "x": 3.466561176696064,
+                "y": -69.40929449382915,
+                "z": 14.348235307538683
+            },
+            "limits": {
+                "cyclic": false,
+                "min": -69.99999967119774,
+                "max": 0.0
+            },
+            "current_position": 0.0
+        },
+        {
+            "name": "rightJoint1",
+            "type": "revolute",
+            "parent": "NiryoLGripper",
+            "position_world": {
+                "x": 0.2626054428496108,
+                "y": -0.7945116425195208,
+                "z": 0.4762037710385527
+            },
+            "orientation_world_deg": {
+                "x": 3.4664872277736665,
+                "y": -69.40930995886718,
+                "z": 14.348143884604609
+            },
+            "limits": {
+                "cyclic": false,
+                "min": 0.0,
+                "max": 69.99999967119774
+            },
+            "current_position": 0.0
+        },
+        {
+            "name": "leftJoint",
+            "type": "revolute",
+            "parent": "leftLink",
+            "position_world": {
+                "x": 0.25556472972479033,
+                "y": -0.8331122456526571,
+                "z": 0.4550904033033311
+            },
+            "orientation_world_deg": {
+                "x": 3.4665080690872228,
+                "y": -69.40930534630536,
+                "z": 14.348174900949958
+            },
+            "limits": {
+                "cyclic": true,
+                "min": -180.00000500895632,
+                "max": 180.00000500895632
+            },
+            "current_position": 0.0
+        },
+        {
+            "name": "rightJoint",
+            "type": "revolute",
+            "parent": "rightLink",
+            "position_world": {
+                "x": 0.2686839441497033,
+                "y": -0.8256992729855415,
+                "z": 0.4905237219439272
+            },
+            "orientation_world_deg": {
+                "x": 3.4665062141526826,
+                "y": -69.40930256972402,
+                "z": 14.348169949584822
+            },
+            "limits": {
+                "cyclic": true,
+                "min": -180.00000500895632,
+                "max": 180.00000500895632
+            },
+            "current_position": 0.0
+        },
+        {
+            "name": "leftJoint",
+            "type": "revolute",
+            "parent": "leftLink",
+            "position_world": {
+                "x": 0.2604358068726218,
+                "y": -0.848557927493737,
+                "z": 0.46714425214186583
+            },
+            "orientation_world_deg": {
+                "x": 3.466522074075049,
+                "y": -69.40930461973721,
+                "z": 14.348186298711024
+            },
+            "limits": {
+                "cyclic": true,
+                "min": -180.00000500895632,
+                "max": 180.00000500895632
+            },
+            "current_position": 0.0
+        },
+        {
+            "name": "rightJoint",
+            "type": "revolute",
+            "parent": "rightLink",
+            "position_world": {
+                "x": 0.2668913810672264,
+                "y": -0.8449102055987364,
+                "z": 0.4845799014704167
+            },
+            "orientation_world_deg": {
+                "x": 3.4665879297556703,
+                "y": -69.40929880318686,
+                "z": 14.348251824112506
+            },
+            "limits": {
+                "cyclic": true,
+                "min": -180.00000500895632,
+                "max": 180.00000500895632
+            },
+            "current_position": 0.0
+        },
+        {
+            "name": "leftJoint",
+            "type": "revolute",
+            "parent": "leftLink",
+            "position_world": {
+                "x": 0.25890554658711507,
+                "y": -0.8193112868907444,
+                "z": 0.464835346956193
+            },
+            "orientation_world_deg": {
+                "x": 3.466720833857523,
+                "y": -69.40928463361878,
+                "z": 14.348361287892956
+            },
+            "limits": {
+                "cyclic": true,
+                "min": -180.00000500895632,
+                "max": 180.00000500895632
+            },
+            "current_position": 0.0
+        },
+        {
+            "name": "rightJoint",
+            "type": "revolute",
+            "parent": "rightLink",
+            "position_world": {
+                "x": 0.2633274018990317,
+                "y": -0.8168128213653448,
+                "z": 0.4767781540432507
+            },
+            "orientation_world_deg": {
+                "x": 3.466601284387406,
+                "y": -69.40929763572024,
+                "z": 14.348263761328756
+            },
+            "limits": {
+                "cyclic": true,
+                "min": -180.00000500895632,
+                "max": 180.00000500895632
+            },
+            "current_position": 0.0
+        }
+    ]
+}

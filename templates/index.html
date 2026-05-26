@@ -3,66 +3,160 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Control Cobots | NiryoOne</title>
+    <title>NiryoOne | Simulador de Control Robótico</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Outfit:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
     <link rel="stylesheet" href="/static/style.css" />
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+          "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+        }
+      }
+    </script>
   </head>
   <body>
-    <header class="topbar">
-      <div>
-        <h1>Controlador Web NiryoOne</h1>
-        <p>Interfaz profesional para manipular cada grado de libertad del robot.</p>
-      </div>
-      <div class="status-pill" id="connection-status">Conectando...</div>
-    </header>
+    <div class="app-shell">
+      <header class="topbar glass">
+        <div class="brand">
+          <span class="brand-tag">NIRYO · SIM</span>
+          <h1>Simulador de Control Robótico</h1>
+          <p id="model-meta">Niryo One — 6 DOF + pinza · jerarquía CoppeliaSim</p>
+        </div>
+        <div class="topbar-actions">
+          <div class="status-cluster">
+            <span class="status-dot" id="status-dot"></span>
+            <span class="status-pill" id="connection-status">CONECTANDO</span>
+          </div>
+          <button type="button" class="btn ghost" id="reset-camera">Restablecer cámara</button>
+        </div>
+      </header>
 
-    <main class="container">
-      <section class="card status-card">
-        <h2>Estado del robot</h2>
-        <div class="status-grid">
-          <div>
-            <span class="label">Conexión</span>
-            <strong id="connected">-</strong>
+      <main class="workspace">
+        <section class="viewport-panel glass">
+          <div class="viewport-header">
+            <h2>Vista 3D · Brazo articulado</h2>
+            <div class="viewport-hints">
+              <span>Orbitar: botón derecho / rueda</span>
+              <span>Articular: anillos naranja</span>
+              <span>Objetivo IK: marcador naranja</span>
+            </div>
           </div>
-          <div>
-            <span class="label">Gripper</span>
-            <strong id="gripper-state">-</strong>
+          <div class="canvas-wrap">
+            <canvas id="sim-canvas"></canvas>
+            <div class="canvas-overlay">
+              <label class="ik-toggle">
+                <input type="checkbox" id="toggle-ik" checked />
+                <span>Seguimiento IK (CCD)</span>
+              </label>
+            </div>
           </div>
-          <div>
-            <span class="label">Último error</span>
-            <strong id="last-error">Ninguno</strong>
-          </div>
-          <div>
-            <span class="label">Actualizado</span>
-            <strong id="last-update">-</strong>
-          </div>
+        </section>
+
+        <aside class="side-panels">
+          <section class="panel glass">
+            <h2>Telemetría</h2>
+            <div class="telemetry-grid">
+              <div class="metric">
+                <span class="label">Efector X</span>
+                <strong id="ee-x">0.000</strong>
+              </div>
+              <div class="metric">
+                <span class="label">Efector Y</span>
+                <strong id="ee-y">0.000</strong>
+              </div>
+              <div class="metric">
+                <span class="label">Efector Z</span>
+                <strong id="ee-z">0.000</strong>
+              </div>
+            </div>
+            <h3 class="subhead">IK / seguimiento</h3>
+            <div class="ik-debug">
+              <div class="metric">
+                <span class="label">Estado IK</span>
+                <strong id="ik-status" data-state="idle">—</strong>
+              </div>
+              <div class="metric">
+                <span class="label">Error al objetivo</span>
+                <strong id="ik-distance">—</strong>
+              </div>
+              <div class="metric">
+                <span class="label">Modo control</span>
+                <strong id="ik-mode">—</strong>
+              </div>
+            </div>
+            <h3 class="subhead">Objetivo IK</h3>
+            <div class="telemetry-grid target-metrics">
+              <div class="metric accent">
+                <span class="label">Target X</span>
+                <strong id="target-x">0.000</strong>
+              </div>
+              <div class="metric accent">
+                <span class="label">Target Y</span>
+                <strong id="target-y">0.000</strong>
+              </div>
+              <div class="metric accent">
+                <span class="label">Target Z</span>
+                <strong id="target-z">0.000</strong>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel glass">
+            <h2>Indicadores de articulación</h2>
+            <div id="joint-indicators" class="joint-indicators"></div>
+            <h3 class="subhead">Pinza</h3>
+            <div class="gripper-meter">
+              <div class="limit-bar"><span id="gripper-bar-fill" style="width:100%"></span></div>
+              <strong id="gripper-pct" class="gripper-pct">100%</strong>
+            </div>
+          </section>
+
+          <section class="panel glass">
+            <h2>Ángulos de servomotores</h2>
+            <div id="angles-list" class="angles-list"></div>
+          </section>
+
+          <section class="panel glass compact">
+            <h2>Estado del sistema</h2>
+            <div class="status-rows">
+              <div><span>Conexión</span><strong id="connected-value">—</strong></div>
+              <div><span>Pinza</span><strong id="gripper-value">—</strong></div>
+              <div><span>Error</span><strong id="error-value">—</strong></div>
+              <div><span>Actualizado</span><strong id="last-update">—</strong></div>
+            </div>
+            <div class="btn-row">
+              <button type="button" class="btn primary" id="btn-send">Enviar pose</button>
+              <button type="button" class="btn secondary" id="btn-sync">Sincronizar</button>
+              <button type="button" class="btn secondary" id="btn-home">HOME</button>
+            </div>
+            <div class="btn-row">
+              <button type="button" class="btn primary" id="btn-open">Abrir pinza</button>
+              <button type="button" class="btn danger" id="btn-close">Cerrar pinza</button>
+            </div>
+          </section>
+
+          <section class="panel glass compact">
+            <h2>Límites articulares</h2>
+            <div id="limits-grid" class="limits-grid"></div>
+          </section>
+        </aside>
+      </main>
+
+      <section class="manual-panel glass" id="manual-panel">
+        <div class="manual-header">
+          <h2>Control manual (modo respaldo)</h2>
+          <button type="button" class="btn ghost" id="toggle-manual">Ocultar</button>
         </div>
-        <div class="button-row">
-          <button id="refresh-button" class="primary">Sincronizar</button>
-          <button id="home-button" class="secondary">Enviar HOME</button>
-        </div>
+        <div id="joint-sliders" class="sliders-grid"></div>
       </section>
+    </div>
 
-      <section class="card control-card">
-        <h2>Control de juntas</h2>
-        <div id="joint-controls" class="joint-grid"></div>
-        <div class="button-row">
-          <button id="move-button" class="primary">Mover al objetivo</button>
-          <button id="sync-button" class="secondary">Actualizar valores</button>
-        </div>
-      </section>
-
-      <section class="card gripper-card">
-        <h2>Pinza / Comandos rápidos</h2>
-        <div class="button-row">
-          <button id="open-button" class="primary">Abrir pinza</button>
-          <button id="close-button" class="danger">Cerrar pinza</button>
-        </div>
-        <div class="info-box">
-          Usa los controles de junta para mover cada DOF. Envía HOME cuando necesites posición segura.
-        </div>
-      </section>
-    </main>
-
-    <script src="/static/app.js"></script>
+    <script type="module" src="/static/js/main.js"></script>
   </body>
 </html>

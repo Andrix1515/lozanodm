@@ -1,6 +1,9 @@
 import time
 from flask import Flask, jsonify, render_template, request
+
+import config
 from robot.coppelia import NiryoOneRobot
+from utils.robot_config import build_simulator_config
 
 app = Flask(__name__, static_folder="static", template_folder="templates")
 robot = NiryoOneRobot()
@@ -19,6 +22,24 @@ def ensure_robot_connection() -> tuple[bool, str]:
 @app.route("/")
 def index():
     return render_template("index.html")
+
+
+@app.route("/api/robot-config", methods=["GET"])
+def simulator_robot_config():
+    """Configuración filtrada del Niryo (solo articulaciones principales)."""
+    return jsonify(build_simulator_config())
+
+
+@app.route("/api/config", methods=["GET"])
+def robot_config():
+    """Expone límites y HOME para sincronizar el simulador con el robot real."""
+    sim_cfg = build_simulator_config()
+    return jsonify({
+        "joint_limits": sim_cfg["joint_limits"],
+        "joint_home": {k: float(v) for k, v in config.JOINT_HOME.items()},
+        "joint_count": 6,
+        "arm_dof": sim_cfg["arm_dof"],
+    })
 
 
 @app.route("/api/status", methods=["GET"])

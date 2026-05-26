@@ -18,14 +18,7 @@ def main():
 
     # 2. Obtener los 6 joints del brazo
     print("\n=== Obteniendo los joints del brazo ===")
-    joint_names = [
-        '/NiryoOne/Joint',
-        '/NiryoOne/Link/Joint',
-        '/NiryoOne/Link/Joint/Link/Joint',
-        '/NiryoOne/Link/Joint/Link/Joint/Link/Joint',
-        '/NiryoOne/Link/Joint/Link/Joint/Link/Joint/Link/Joint',
-        '/NiryoOne/Joint/Link/Joint/Link/Joint/Link/Joint/Link/Joint/Link/Joint',
-    ]
+    joint_names = config.JOINT_PATHS
     
     joint_handles = []
     for name in joint_names:

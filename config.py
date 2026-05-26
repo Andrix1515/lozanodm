@@ -16,7 +16,26 @@ JOYSTICK_INTERVAL = 0.10
 GRIPPER_COOLDOWN = 0.35
 
 # Rutas de joints (escena NiryoOne en CoppeliaSim)
-JOINT_PATHS = [
+ARM_JOINT_NAMES = [
+    "base_joint",
+    "shoulder_joint",
+    "elbow_joint",
+    "forearm_roll_joint",
+    "wrist_pitch_joint",
+    "tool_roll_joint",
+]
+
+NAMED_JOINT_PATHS = [
+    "/NiryoOne/base_joint",
+    "/NiryoOne/base_joint/shoulder_joint",
+    "/NiryoOne/base_joint/shoulder_joint/elbow_joint",
+    "/NiryoOne/base_joint/shoulder_joint/elbow_joint/forearm_roll_joint",
+    "/NiryoOne/base_joint/shoulder_joint/elbow_joint/forearm_roll_joint/wrist_pitch_joint",
+    "/NiryoOne/base_joint/shoulder_joint/elbow_joint/forearm_roll_joint/wrist_pitch_joint/tool_roll_joint",
+]
+
+# Fallback para versiones antiguas de la escena donde los joints se llaman "Joint".
+LEGACY_JOINT_PATHS = [
     "/NiryoOne/Joint",
     "/NiryoOne/Link/Joint",
     "/NiryoOne/Link/Joint/Link/Joint",
@@ -24,6 +43,8 @@ JOINT_PATHS = [
     "/NiryoOne/Link/Joint/Link/Joint/Link/Joint/Link/Joint",
     "/NiryoOne/Joint/Link/Joint/Link/Joint/Link/Joint/Link/Joint/Link/Joint",
 ]
+
+JOINT_PATHS = NAMED_JOINT_PATHS + LEGACY_JOINT_PATHS
 
 # Límites físicos del NiryoOne en grados
 JOINT_LIMITS = {
