@@ -39,7 +39,7 @@ def main():
     print("\nVentana abierta. Coloca la mano sobre la cuadrícula 3×3.")
     print("  Puño cerrado  → cierra la pinza")
     print("  Mano abierta  → mueve el brazo según la celda")
-    print("  [H] Home      [Q] Salir\n")
+    print("  [H] Home  [C] Calibrar  [Q] Salir\n")
 
     try:
         while app.running:
@@ -52,6 +52,8 @@ def main():
             if key in (ord("h"), ord("H")) and robot.connected:
                 robot.go_home()
                 app.status = "Posición HOME"
+            if key in (ord("c"), ord("C")):
+                app.start_calibration()
 
     except KeyboardInterrupt:
         pass

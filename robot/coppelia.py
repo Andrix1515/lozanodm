@@ -3,12 +3,17 @@ Conexión y control del NiryoOne en CoppeliaSim.
 Misma API y flujo que simulacion_completa.py (RemoteAPIClient + startSimulation).
 """
 
+import logging
+import math
 import time
 from typing import Optional
 
 from coppeliasim_zmqremoteapi_client import RemoteAPIClient
 
 import config
+from utils.kinematics import clamp_joint_angles, is_near_singularity
+
+logger = logging.getLogger(__name__)
 
 
 class NiryoOneRobot:
@@ -105,6 +110,34 @@ class NiryoOneRobot:
         self._sim = None
         self._joint_handles = []
 
+    def _joint_angles_degrees(self, angles: list[float]) -> dict[str, float]:
+        return {f"joint{i + 1}": math.degrees(angle) for i, angle in enumerate(angles)}
+
+    def _joint_angles_radians(self, joint_angles: dict[str, float]) -> list[float]:
+        return [math.radians(joint_angles[f"joint{i + 1}"]) for i in range(6)]
+
+    def _set_joint_positions_raw(self, angles: list[float]) -> bool:
+        if not self.connected or not self._sim or len(angles) != 6:
+            return False
+        try:
+            for joint, angle in zip(self._joint_handles, angles):
+                self._sim.setJointTargetPosition(joint, float(angle))
+            return True
+        except Exception as e:
+            self.last_error = str(e)
+            print(f"[Robot] Error set_joint_positions: {e}")
+            return False
+
+    def _validate_target_angles(self, target_angles: list[float]) -> list[float] | None:
+        angle_map = self._joint_angles_degrees(target_angles)
+        clamped_map = clamp_joint_angles(angle_map)
+        near_singularity, message = is_near_singularity(clamped_map)
+        if near_singularity:
+            logger.warning("Singularidad detectada: %s", message)
+            logger.warning("Se cancela el movimiento y se retorna a HOME seguro.")
+            return None
+        return self._joint_angles_radians(clamped_map)
+
     def get_joint_positions(self) -> list[float]:
         if not self._sim or not self._joint_handles:
             return []
@@ -117,19 +150,20 @@ class NiryoOneRobot:
     def set_joint_positions(self, angles: list[float]) -> bool:
         if not self.connected or not self._sim or len(angles) != 6:
             return False
-        try:
-            for joint, angle in zip(self._joint_handles, angles):
-                self._sim.setJointTargetPosition(joint, float(angle))
-            return True
-        except Exception as e:
-            self.last_error = str(e)
-            print(f"[Robot] Error set_joint_positions: {e}")
-            return False
+        validated = self._validate_target_angles(angles)
+        if validated is None:
+            return self.go_home()
+        return self._set_joint_positions_raw(validated)
 
     def move_to(self, target_angles: list[float], duration: float = 1.0, steps: int = 30) -> bool:
-        """Movimiento interpolado — igual que simulacion_completa.py."""
-        if not self.connected:
+        """Movimiento interpolado con validación de límites y singularidades."""
+        if not self.connected or len(target_angles) != 6:
             return False
+
+        validated = self._validate_target_angles(target_angles)
+        if validated is None:
+            return self.go_home()
+
         try:
             start_angles = self.get_joint_positions()
             if len(start_angles) != 6:
@@ -137,7 +171,7 @@ class NiryoOneRobot:
             for step in range(steps):
                 alpha = (step + 1) / steps
                 for joint, start, end in zip(
-                    self._joint_handles, start_angles, target_angles
+                    self._joint_handles, start_angles, validated
                 ):
                     pos = start + (end - start) * alpha
                     self._sim.setJointTargetPosition(joint, float(pos))
@@ -178,4 +212,5 @@ class NiryoOneRobot:
             return False
 
     def go_home(self) -> bool:
-        return self.move_to([0.0] * 6, duration=2.0, steps=40)
+        """Mueve el robot a la configuración HOME segura definida en config.JOINT_HOME."""
+        return self.move_to(list(config.JOINT_HOME.values()), duration=2.0, steps=40)

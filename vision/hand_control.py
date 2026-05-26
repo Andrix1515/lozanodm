@@ -3,14 +3,23 @@ Detección de mano (MediaPipe), cuadrícula 3×3 y control tipo joystick.
 Puño cerrado → cierra gripper. Mano abierta → joystick según celda activa.
 """
 
+import json
 import math
+import os
 import time
 
 import cv2
-import mediapipe as mp
 import numpy as np
 
+try:
+    import mediapipe as mp
+except ImportError as error:
+    raise ImportError(
+        "MediaPipe no está instalado. Ejecuta: pip install mediapipe==0.10.0"
+    ) from error
+
 import config
+from utils.kinematics import AdaptiveEMAFilter
 
 # Landmarks MediaPipe
 WRIST = 0
@@ -19,6 +28,11 @@ INDEX_TIP, INDEX_PIP = 8, 6
 MIDDLE_TIP, MIDDLE_PIP = 12, 10
 RING_TIP, RING_PIP = 16, 14
 PINKY_TIP, PINKY_PIP = 20, 18
+
+CALIBRATION_HOLD_SECONDS = 2.0
+CALIBRATION_STABILITY_RADIUS = 0.04
+DEAD_ZONE_HALF_SIZE = 0.15
+CALIBRATION_FILENAME = "calibration.json"
 
 
 def _dist(a, b) -> float:
@@ -58,22 +72,8 @@ def cell_from_position(cx: float, cy: float) -> tuple[int, int]:
     return col, row
 
 
-def deltas_for_cell(col: int, row: int) -> list[float]:
-    """
-    Celda → incrementos de joints.
-    col 0=izq, 2=der | row 0=arriba, 2=abajo | centro sin movimiento.
-    """
-    step = config.JOINT_STEP
-    d = [0.0] * 6
-    if col == 0:
-        d[0] = -step
-    elif col == 2:
-        d[0] = step
-    if row == 0:
-        d[1] = step
-    elif row == 2:
-        d[1] = -step
-    return d
+def _clamp01(value: float) -> float:
+    return max(0.0, min(1.0, value))
 
 
 class HandJoystickApp:
@@ -83,6 +83,13 @@ class HandJoystickApp:
         self.robot = robot
         self.cap = None
         self.running = False
+
+        if not hasattr(mp, 'solutions'):
+            raise RuntimeError(
+                "La versión instalada de MediaPipe no es compatible. "
+                "Instala la versión correcta con:\n"
+                "    pip install mediapipe==0.10.5"
+            )
 
         self.mp_hands = mp.solutions.hands
         self.mp_draw = mp.solutions.drawing_utils
@@ -103,6 +110,25 @@ class HandJoystickApp:
         self._last_grip_time = 0.0
         self._gripper_is_closed = False
 
+        self._hand_x = 0.5
+        self._hand_y = 0.5
+        self._position_filter_x = AdaptiveEMAFilter()
+        self._position_filter_y = AdaptiveEMAFilter()
+        self._calibration_stage = None
+        self._calibration_reference = None
+        self._calibration_hold_start = 0.0
+        self._calibration_countdown = CALIBRATION_HOLD_SECONDS
+        self._calibration_points = {}
+        self._calibration_steps = [
+            ("Centra la mano → mantén 2 segundos", "center"),
+            ("Lleva la mano a la esquina superior izquierda → mantén 2 segundos", "min"),
+            ("Lleva la mano a la esquina inferior derecha → mantén 2 segundos", "max"),
+        ]
+        self._calibration_file_path = os.path.abspath(
+            os.path.join(os.path.dirname(__file__), "..", CALIBRATION_FILENAME)
+        )
+        self.calibration = self._load_calibration()
+
     def start_camera(self) -> bool:
         self.cap = cv2.VideoCapture(config.CAMERA_INDEX)
         if not self.cap.isOpened():
@@ -119,6 +145,34 @@ class HandJoystickApp:
             self.cap.release()
         self.hands.close()
         cv2.destroyAllWindows()
+
+    def _load_calibration(self):
+        try:
+            if os.path.exists(self._calibration_file_path):
+                with open(self._calibration_file_path, "r", encoding="utf-8") as handle:
+                    calibration = json.load(handle)
+                if all(key in calibration for key in ("center", "min", "max")):
+                    self.status = "Calibración cargada."
+                    return calibration
+        except Exception as error:
+            self.status = f"Error al cargar calibración: {error}"
+        return None
+
+    def _save_calibration(self):
+        try:
+            with open(self._calibration_file_path, "w", encoding="utf-8") as handle:
+                json.dump(self.calibration, handle, indent=2)
+            self.status = "Calibración guardada en calibration.json"
+        except Exception as error:
+            self.status = f"No se pudo guardar calibración: {error}"
+
+    def start_calibration(self):
+        self._calibration_stage = 0
+        self._calibration_reference = None
+        self._calibration_hold_start = 0.0
+        self._calibration_countdown = CALIBRATION_HOLD_SECONDS
+        self._calibration_points = {}
+        self.status = "Iniciando calibración..."
 
     def process_frame(self) -> np.ndarray:
         ret, frame = self.cap.read()
@@ -138,23 +192,121 @@ class HandJoystickApp:
                 frame, hand_lm, self.mp_hands.HAND_CONNECTIONS
             )
 
-            cx, cy = hand_center(hand_lm)
-            self.active_cell = cell_from_position(cx, cy)
+            raw_cx, raw_cy = hand_center(hand_lm)
+            self._update_calibration(raw_cx, raw_cy)
+            filtered_cx = self._position_filter_x.update(raw_cx)
+            filtered_cy = self._position_filter_y.update(raw_cy)
+            self._hand_x, self._hand_y = self._apply_calibration(filtered_cx, filtered_cy)
+            self.active_cell = cell_from_position(self._hand_x, self._hand_y)
             self.fingers = count_extended_fingers(hand_lm)
 
-            px, py = int(cx * w), int(cy * h)
+            px, py = int(self._hand_x * w), int(self._hand_y * h)
             cv2.circle(frame, (px, py), 12, (0, 255, 120), -1)
             cv2.circle(frame, (px, py), 16, (255, 255, 255), 2)
 
-            self._apply_robot_control()
-
+            if self._calibration_stage is None:
+                self._apply_robot_control()
         else:
             self.active_cell = (1, 1)
-            self.status = "Esperando mano..."
+            if self._calibration_stage is None:
+                self.status = "Esperando mano..."
+            else:
+                self._update_calibration(None, None)
 
         self._draw_grid(frame, w, h)
         self._draw_hud(frame)
         return frame
+
+    def _update_calibration(self, cx, cy):
+        if self._calibration_stage is None:
+            return
+
+        if cx is None or cy is None:
+            self.status = "Busca mano para calibrar..."
+            self._calibration_reference = None
+            return
+
+        prompt, key = self._calibration_steps[self._calibration_stage]
+        if self._calibration_reference is None:
+            self._calibration_reference = (cx, cy)
+            self._calibration_hold_start = time.time()
+            self._calibration_countdown = CALIBRATION_HOLD_SECONDS
+            self.status = f"{prompt} ({self._calibration_stage + 1}/3)"
+            return
+
+        distance = math.hypot(cx - self._calibration_reference[0], cy - self._calibration_reference[1])
+        if distance <= CALIBRATION_STABILITY_RADIUS:
+            elapsed = time.time() - self._calibration_hold_start
+            remaining = max(0.0, CALIBRATION_HOLD_SECONDS - elapsed)
+            self._calibration_countdown = remaining
+            if elapsed >= CALIBRATION_HOLD_SECONDS:
+                self._calibration_points[key] = {"x": cx, "y": cy}
+                self._calibration_stage += 1
+                self._calibration_reference = None
+                if self._calibration_stage >= len(self._calibration_steps):
+                    self.calibration = self._calibration_points
+                    self._save_calibration()
+                    self._calibration_stage = None
+                    self.status = "Calibración completada."
+                else:
+                    next_prompt = self._calibration_steps[self._calibration_stage][0]
+                    self.status = f"Capturado {key}. {next_prompt}"
+            else:
+                self.status = f"{prompt} — Mantén {remaining:.1f}s"
+        else:
+            self._calibration_reference = (cx, cy)
+            self._calibration_hold_start = time.time()
+            self._calibration_countdown = CALIBRATION_HOLD_SECONDS
+            self.status = f"Estabiliza la mano para {prompt}"
+
+    def _apply_calibration(self, cx: float, cy: float) -> tuple[float, float]:
+        if not self.calibration:
+            return cx, cy
+
+        min_x = self.calibration["min"]["x"]
+        max_x = self.calibration["max"]["x"]
+        min_y = self.calibration["min"]["y"]
+        max_y = self.calibration["max"]["y"]
+        center_x = self.calibration["center"]["x"]
+        center_y = self.calibration["center"]["y"]
+
+        if max_x <= min_x or max_y <= min_y:
+            return cx, cy
+
+        raw_x = (cx - min_x) / (max_x - min_x)
+        raw_y = (cy - min_y) / (max_y - min_y)
+        center_x_norm = (center_x - min_x) / (max_x - min_x)
+        center_y_norm = (center_y - min_y) / (max_y - min_y)
+
+        adjusted_x = _clamp01(raw_x + (0.5 - center_x_norm))
+        adjusted_y = _clamp01(raw_y + (0.5 - center_y_norm))
+        return adjusted_x, adjusted_y
+
+    def _is_in_dead_zone(self, cx: float, cy: float) -> bool:
+        return (
+            abs(cx - 0.5) <= DEAD_ZONE_HALF_SIZE
+            and abs(cy - 0.5) <= DEAD_ZONE_HALF_SIZE
+        )
+
+    def _movement_scale(self, cx: float, cy: float) -> float:
+        distance = math.hypot(cx - 0.5, cy - 0.5)
+        max_distance = math.hypot(0.5, 0.5)
+        return config.MOVEMENT_SPEED * min(1.0, distance / max_distance)
+
+    def _deltas_for_position(self, cx: float, cy: float) -> list[float]:
+        scale = self._movement_scale(cx, cy)
+        if scale <= 0.0:
+            return [0.0] * 6
+
+        step = config.JOINT_STEP * scale
+        dx = cx - 0.5
+        dy = 0.5 - cy
+        deltas = [0.0] * 6
+        if abs(dx) >= 0.02:
+            deltas[0] = math.copysign(step, dx)
+        if abs(dy) >= 0.02:
+            deltas[1] = math.copysign(step, dy)
+        return deltas
 
     def _apply_robot_control(self):
         if not self.robot.connected:
@@ -183,22 +335,27 @@ class HandJoystickApp:
             self.status = f"Puño cerrado — gripper {self.gripper_state}"
             return
 
-        col, row = self.active_cell
-        if col == 1 and row == 1:
-            self.status = "Centro — sin movimiento"
+        if self._is_in_dead_zone(self._hand_x, self._hand_y):
+            self.status = "Zona muerta central"
             return
 
         if now - self._last_move_time < config.JOYSTICK_INTERVAL:
             return
 
-        deltas = deltas_for_cell(col, row)
-        if self.robot.adjust_joints(deltas):
+        deltas = self._deltas_for_position(self._hand_x, self._hand_y)
+        if any(abs(value) > 0.0 for value in deltas) and self.robot.adjust_joints(deltas):
             labels = ["IZQ", "CENTRO", "DER"]
             vlabels = ["ARRIBA", "MEDIO", "ABAJO"]
-            self.status = f"Joystick {labels[col]} / {vlabels[row]}"
+            self.status = f"Joystick {labels[self.active_cell[0]]} / {vlabels[self.active_cell[1]]}"
             self._last_move_time = now
 
     def _draw_grid(self, frame: np.ndarray, w: int, h: int):
+        dead_x1 = int((0.5 - DEAD_ZONE_HALF_SIZE) * w)
+        dead_y1 = int((0.5 - DEAD_ZONE_HALF_SIZE) * h)
+        dead_x2 = int((0.5 + DEAD_ZONE_HALF_SIZE) * w)
+        dead_y2 = int((0.5 + DEAD_ZONE_HALF_SIZE) * h)
+        cv2.rectangle(frame, (dead_x1, dead_y1), (dead_x2, dead_y2), (0, 200, 200), 1)
+
         for i in range(1, config.GRID_COLS):
             x = w * i // config.GRID_COLS
             cv2.line(frame, (x, 0), (x, h), (70, 70, 70), 1)
@@ -224,8 +381,13 @@ class HandJoystickApp:
             f"Dedos: {self.fingers}",
             f"Gripper: {self.gripper_state}",
             self.status,
-            "[Q] Salir  [H] Home",
+            "[Q] Salir  [H] Home  [C] Calibrar",
         ]
+        if self._calibration_stage is not None:
+            lines.append(
+                f"Calibración {self._calibration_stage + 1}/3 — {self._calibration_countdown:.1f}s"
+            )
+
         y = 24
         for line in lines:
             cv2.putText(

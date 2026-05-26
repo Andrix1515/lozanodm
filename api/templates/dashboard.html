@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard NiryoOne</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: "Inter", "Segoe UI", Roboto, Arial, sans-serif;
+      background: #0d1117;
+      color: #c9d1d9;
+      --surface: #161b22;
+      --surface-strong: #0f141b;
+      --border: #30363d;
+      --accent-ok: #00d4aa;
+      --accent-warning: #f79c42;
+      --accent-error: #ff5454;
+      --text: #c9d1d9;
+      --muted: #8b949e;
+      --shadow: 0 20px 45px rgba(0, 0, 0, 0.35);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: radial-gradient(circle at top, rgba(0, 212, 170, 0.08), transparent 40%), #0d1117;
+      color: var(--text);
+    }
+
+    main {
+      width: min(1400px, 100%);
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    header {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    header h1 {
+      font-size: clamp(2rem, 2.5vw, 2.8rem);
+      margin: 0;
+      letter-spacing: -0.04em;
+    }
+
+    header .subtitle {
+      color: var(--muted);
+      font-size: 0.96rem;
+      margin-bottom: 3px;
+    }
+
+    .banner {
+      width: 100%;
+      padding: 12px 16px;
+      border: 1px solid var(--accent-error);
+      border-radius: 12px;
+      background: rgba(255, 84, 84, 0.12);
+      color: #fff;
+      display: none;
+      margin-bottom: 18px;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 55% 45%;
+      gap: 20px;
+    }
+
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .video-panel {
+      position: relative;
+      min-height: 520px;
+    }
+
+    .video-panel img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .video-overlay {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      padding: 14px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      grid-template-rows: repeat(3, 1fr);
+      gap: 6px;
+    }
+
+    .video-overlay > div {
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: rgba(12, 17, 23, 0.35);
+      border-radius: 10px;
+      transition: background 180ms ease;
+    }
+
+    .video-overlay > div.active {
+      background: rgba(0, 212, 170, 0.3);
+      border-color: rgba(0, 212, 170, 0.7);
+    }
+
+    .status-block {
+      position: absolute;
+      left: 18px;
+      bottom: 18px;
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 120px;
+      padding: 10px 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(10, 16, 22, 0.76);
+      color: #fff;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+      line-height: 1;
+    }
+
+    .chip.ok { background: rgba(0, 212, 170, 0.18); color: #adffeb; }
+    .chip.warn { background: rgba(247, 156, 66, 0.18); color: #ffd8b0; }
+    .chip.error { background: rgba(255, 84, 84, 0.18); color: #ffcdcd; }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .metric-card,
+    .side-card,
+    .action-panel,
+    .macro-panel,
+    .log-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 18px;
+      box-shadow: var(--shadow);
+    }
+
+    .metric-card {
+      padding: 18px;
+    }
+
+    .metric-card h3,
+    .panel-title {
+      margin: 0 0 12px;
+      font-size: 0.95rem;
+      color: var(--muted);
+      letter-spacing: 0.02em;
+    }
+
+    .metric-value {
+      font-size: clamp(1.7rem, 2vw, 2.2rem);
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .slider-card {
+      display: grid;
+      gap: 18px;
+    }
+
+    .slider-row {
+      display: grid;
+      gap: 10px;
+    }
+
+    .slider-label {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      font-size: 0.92rem;
+      color: var(--muted);
+    }
+
+    .slider-input {
+      width: 100%;
+      accent-color: var(--accent-ok);
+    }
+
+    .range-meta {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.82rem;
+      color: var(--muted);
+    }
+
+    .button-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .button-grid button,
+    .toggle-row button,
+    .macro-card button {
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: var(--surface-strong);
+      color: inherit;
+      padding: 14px 16px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: transform 120ms ease, border-color 120ms ease, background 120ms ease;
+    }
+
+    .button-grid button:hover,
+    .toggle-row button:hover,
+    .macro-card button:hover {
+      transform: translateY(-1px);
+      border-color: rgba(0, 212, 170, 0.4);
+    }
+
+    .button-grid button.loading {
+      opacity: 0.7;
+      cursor: progress;
+    }
+
+    .button-primary {
+      background: linear-gradient(135deg, var(--accent-ok), #00b08f);
+      color: #020617;
+      border-color: transparent;
+    }
+
+    .button-warning { color: #fff; background: var(--accent-warning); border-color: transparent; }
+    .button-danger { color: #fff; background: var(--accent-error); border-color: transparent; grid-column: span 3; }
+
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-top: 18px;
+      flex-wrap: wrap;
+    }
+
+    .toggle-switch {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      background: var(--surface-strong);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 12px 16px;
+      min-width: 240px;
+    }
+
+    .toggle-switch span {
+      font-size: 0.95rem;
+      font-weight: 700;
+    }
+
+    .toggle-control {
+      position: relative;
+      width: 72px;
+      height: 34px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.08);
+      cursor: pointer;
+    }
+
+    .toggle-thumb {
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: #fff;
+      transition: transform 180ms ease;
+    }
+
+    .toggle-control.active .toggle-thumb {
+      transform: translateX(38px);
+    }
+
+    .macro-list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .macro-card {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .log-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .log-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .log-content {
+      background: rgba(13, 17, 23, 0.7);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 16px;
+      padding: 14px;
+      min-height: 220px;
+      overflow: auto;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.92rem;
+      line-height: 1.45;
+    }
+
+    .log-item {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 16px;
+      align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+
+    .log-item:last-child { border-bottom: none; }
+
+    .log-action { font-weight: 700; color: #fff; }
+    .log-result.ok { color: var(--accent-ok); }
+    .log-result.error { color: var(--accent-error); }
+    .log-result.warn { color: var(--accent-warning); }
+
+    .small-label { color: var(--muted); font-size: 0.82rem; }
+
+    @media (max-width: 1080px) {
+      .layout { grid-template-columns: 1fr; }
+      .action-panel .button-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .button-danger { grid-column: span 2; }
+    }
+
+    @media (max-width: 720px) {
+      main { padding: 16px; }
+      .status-block { position: static; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 14px; }
+      .video-panel { min-height: 320px; }
+      .info-grid { grid-template-columns: 1fr; }
+      .button-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div>
+        <p class="subtitle">Control avanzado del NiryoOne</p>
+        <h1>Panel de Control</h1>
+      </div>
+      <div class="badge-wrapper">
+        <span class="chip" id="connection-badge">Conectando...</span>
+      </div>
+    </header>
+
+    <div class="banner" id="connection-banner">Conexión perdida. Reintentando...</div>
+
+    <div class="layout">
+      <section class="panel video-panel">
+        <img id="video-stream" src="/video_feed" alt="Video feed" />
+        <div class="video-overlay" id="video-overlay">
+          <div data-cell="0-0"></div><div data-cell="1-0"></div><div data-cell="2-0"></div>
+          <div data-cell="0-1"></div><div data-cell="1-1"></div><div data-cell="2-1"></div>
+          <div data-cell="0-2"></div><div data-cell="1-2"></div><div data-cell="2-2"></div>
+        </div>
+        <div class="status-block">
+          <span class="chip" id="gesture-chip">GESTURE: --</span>
+          <span class="chip" id="gripper-chip">GRIPPER: --</span>
+        </div>
+      </section>
+
+      <div class="panel side-card">
+        <div class="info-grid">
+          <div class="metric-card">
+            <h3>FPS</h3>
+            <div class="metric-value" id="metric-fps">--</div>
+          </div>
+          <div class="metric-card">
+            <h3>Latencia</h3>
+            <div class="metric-value" id="metric-latency">-- ms</div>
+          </div>
+          <div class="metric-card">
+            <h3>Modo activo</h3>
+            <div class="metric-value" id="metric-mode">--</div>
+          </div>
+          <div class="metric-card">
+            <h3>Estado conexión</h3>
+            <div class="metric-value" id="metric-connection">--</div>
+          </div>
+        </div>
+
+        <div class="slider-card panel">
+          <div class="panel-title">Control de articulaciones</div>
+          <div id="sliders"></div>
+          <div class="toggle-row" style="margin-top: 18px;">
+            <button id="send-joints" class="button-primary">Enviar</button>
+            <button id="reset-sliders">HOME</button>
+          </div>
+        </div>
+
+        <div class="action-panel panel">
+          <div class="panel-title">Acciones rápidas</div>
+          <div class="button-grid">
+            <button id="quick-home">HOME</button>
+            <button id="open-gripper">Abrir garra</button>
+            <button id="close-gripper">Cerrar garra</button>
+            <button id="zone-left">Zona LEFT</button>
+            <button id="zone-right">Zona RIGHT</button>
+            <button id="pick-place">Pick & Place</button>
+          </div>
+          <button id="button-estop" class="button-danger">E-STOP</button>
+        </div>
+
+        <div class="panel">
+          <div class="panel-title">Modo de operación</div>
+          <div class="toggle-row">
+            <div>
+              <p class="small-label">Modo actual</p>
+              <strong id="mode-label">GESTURE</strong>
+            </div>
+            <button id="mode-toggle" class="toggle-switch" aria-label="Toggle operation mode">
+              <span>GESTURE</span>
+              <div class="toggle-control" id="mode-toggle-control">
+                <div class="toggle-thumb"></div>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        <div class="macro-panel panel">
+          <div class="panel-title">Macros guardadas</div>
+          <div id="macro-list" class="macro-list"><p class="small-label">Cargando macros...</p></div>
+          <p class="small-label" id="macro-status"></p>
+        </div>
+
+        <div class="log-panel panel">
+          <div class="log-header">
+            <div>
+              <p class="panel-title">Registro de comandos</p>
+            </div>
+            <button id="clear-log" class="button-warning">Limpiar</button>
+          </div>
+          <div id="log-content" class="log-content"><p class="small-label">Cargando...</p></div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const stateUrl = '/api/state';
+    const logUrl = '/api/log?limit=50';
+    const macrosUrl = '/api/macros';
+    const commandUrl = '/api/command';
+
+    const overlayCells = Array.from(document.querySelectorAll('[data-cell]'));
+    const banner = document.getElementById('connection-banner');
+    const connectionBadge = document.getElementById('connection-badge');
+    const gestureChip = document.getElementById('gesture-chip');
+    const gripperChip = document.getElementById('gripper-chip');
+    const metricFps = document.getElementById('metric-fps');
+    const metricLatency = document.getElementById('metric-latency');
+    const metricMode = document.getElementById('metric-mode');
+    const metricConnection = document.getElementById('metric-connection');
+    const modeLabel = document.getElementById('mode-label');
+    const modeToggle = document.getElementById('mode-toggle');
+    const modeControl = document.getElementById('mode-toggle-control');
+    const slidersContainer = document.getElementById('sliders');
+    const logContent = document.getElementById('log-content');
+    const macroList = document.getElementById('macro-list');
+    const macroStatus = document.getElementById('macro-status');
+    const sendJointsButton = document.getElementById('send-joints');
+    const resetSlidersButton = document.getElementById('reset-sliders');
+    const quickHomeButton = document.getElementById('quick-home');
+    const openGripperButton = document.getElementById('open-gripper');
+    const closeGripperButton = document.getElementById('close-gripper');
+    const zoneLeftButton = document.getElementById('zone-left');
+    const zoneRightButton = document.getElementById('zone-right');
+    const pickPlaceButton = document.getElementById('pick-place');
+    const estopButton = document.getElementById('button-estop');
+    const clearLogButton = document.getElementById('clear-log');
+
+    const sliderState = {
+      joint1: 0,
+      joint2: 0,
+      joint3: 0,
+      joint4: 0,
+      joint5: 0,
+      joint6: 0,
+    };
+
+    let activeMode = 'GESTURE';
+    let lastStamp = Date.now();
+    let playingMacro = false;
+
+    const sliderSpec = [
+      { key: 'joint1', label: 'Joint 1 (Base)', min: -170, max: 170 },
+      { key: 'joint2', label: 'Joint 2 (Hombro)', min: -90, max: 90 },
+      { key: 'joint3', label: 'Joint 3 (Codo)', min: -135, max: 135 },
+      { key: 'joint4', label: 'Joint 4 (Antebrazo)', min: -90, max: 90 },
+      { key: 'joint5', label: 'Joint 5 (Muñeca Pitch)', min: -90, max: 90 },
+      { key: 'joint6', label: 'Joint 6 (Muñeca Roll)', min: -180, max: 180 },
+    ];
+
+    function buildSliders() {
+      slidersContainer.innerHTML = '';
+      sliderSpec.forEach(spec => {
+        const row = document.createElement('div');
+        row.className = 'slider-row';
+
+        const label = document.createElement('div');
+        label.className = 'slider-label';
+        label.innerHTML = `<span>${spec.label}</span><span id="value-${spec.key}">${sliderState[spec.key]}°</span>`;
+
+        const input = document.createElement('input');
+        input.type = 'range';
+        input.min = spec.min;
+        input.max = spec.max;
+        input.value = sliderState[spec.key];
+        input.className = 'slider-input';
+        input.dataset.key = spec.key;
+        input.addEventListener('input', event => {
+          const k = event.target.dataset.key;
+          const v = Number(event.target.value);
+          sliderState[k] = v;
+          document.getElementById(`value-${k}`).textContent = `${v}°`;
+        });
+
+        const rangeMeta = document.createElement('div');
+        rangeMeta.className = 'range-meta';
+        rangeMeta.innerHTML = `<span>${spec.min}°</span><span>${spec.max}°</span>`;
+
+        row.appendChild(label);
+        row.appendChild(input);
+        row.appendChild(rangeMeta);
+        slidersContainer.appendChild(row);
+      });
+    }
+
+    function updateOverlay(zone) {
+      overlayCells.forEach(cell => cell.classList.remove('active'));
+      const map = {
+        LEFT: '0-1',
+        RIGHT: '2-1',
+        UP: '1-0',
+        DOWN: '1-2',
+        CENTER: '1-1',
+        TOPLEFT: '0-0',
+        TOPRIGHT: '2-0',
+        BOTTOMLEFT: '0-2',
+        BOTTOMRIGHT: '2-2',
+      };
+      const target = map[(zone || '').toUpperCase()] || '1-1';
+      const cell = document.querySelector(`[data-cell="${target}"]`);
+      if (cell) cell.classList.add('active');
+    }
+
+    function setBadge(badge, text, state) {
+      badge.textContent = text;
+      badge.className = 'chip ' + state;
+    }
+
+    function createLogItem(entry) {
+      const item = document.createElement('div');
+      item.className = 'log-item';
+      const ts = document.createElement('div'); ts.className = 'small-label'; ts.textContent = entry.ts;
+      const action = document.createElement('div'); action.className = 'log-action'; action.textContent = entry.action;
+      const result = document.createElement('div');
+      const resultClass = entry.result === 'ok' ? 'ok' : entry.result === 'error' ? 'error' : 'warn';
+      result.className = `log-result ${resultClass}`;
+      result.textContent = entry.result;
+      item.appendChild(ts);
+      item.appendChild(action);
+      item.appendChild(result);
+      return item;
+    }
+
+    async function fetchState() {
+      const start = Date.now();
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 3000);
+      try {
+        const response = await fetch(stateUrl, { signal: controller.signal });
+        clearTimeout(timeout);
+        if (!response.ok) throw new Error('Estado no disponible');
+        const data = await response.json();
+        banner.style.display = 'none';
+        connectionBadge.textContent = 'CONEXIÓN OK';
+        connectionBadge.className = 'chip ok';
+        metricConnection.textContent = data.connected ? 'Online' : 'Offline';
+        metricMode.textContent = data.mode || '--';
+        metricFps.textContent = Number(data.fps).toFixed(1);
+        metricLatency.textContent = `${Date.now() - start} ms`;
+        modeLabel.textContent = data.mode;
+        activeMode = data.mode;
+        updateModeToggle();
+        gestureChip.textContent = `GESTURE: ${data.gesture || '--'}`;
+        const gestureState = data.gesture && data.gesture.toUpperCase().includes('ERROR') ? 'error' : data.gesture && data.gesture.toUpperCase().includes('WARN') ? 'warn' : 'ok';
+        setBadge(gestureChip, `GESTURE: ${data.gesture || '--'}`, gestureState);
+        setBadge(gripperChip, `GRIPPER: ${data.gripper || '--'}`, data.gripper === 'CLOSED' ? 'error' : 'ok');
+
+        if (data.joints) {
+          Object.entries(data.joints).forEach(([key, value]) => {
+            if (sliderState.hasOwnProperty(key)) {
+              sliderState[key] = Math.round(value);
+            }
+          });
+          refreshSliderValues();
+        }
+
+        const zoneCandidate = inferZone(data);
+        updateOverlay(zoneCandidate);
+      } catch (error) {
+        console.warn('State fetch failed', error);
+        banner.style.display = 'block';
+        connectionBadge.textContent = 'CONEXIÓN PERDIDA';
+        connectionBadge.className = 'chip error';
+        metricConnection.textContent = 'Desconectado';
+      }
+    }
+
+    function inferZone(data) {
+      const lastCommand = (data.last_command || '').toUpperCase();
+      if (lastCommand.includes('LEFT')) return 'LEFT';
+      if (lastCommand.includes('RIGHT')) return 'RIGHT';
+      if (lastCommand.includes('UP')) return 'UP';
+      if (lastCommand.includes('DOWN')) return 'DOWN';
+      if (data.gesture) {
+        const gesture = data.gesture.toUpperCase();
+        if (gesture.includes('LEFT')) return 'LEFT';
+        if (gesture.includes('RIGHT')) return 'RIGHT';
+        if (gesture.includes('UP')) return 'UP';
+        if (gesture.includes('DOWN')) return 'DOWN';
+      }
+      return 'CENTER';
+    }
+
+    function refreshSliderValues() {
+      sliderSpec.forEach(spec => {
+        const input = document.querySelector(`input[data-key="${spec.key}"]`);
+        if (input) {
+          input.value = sliderState[spec.key];
+          document.getElementById(`value-${spec.key}`).textContent = `${sliderState[spec.key]}°`;
+        }
+      });
+    }
+
+    async function fetchLogs() {
+      try {
+        const response = await fetch(logUrl);
+        if (!response.ok) throw new Error('No log');
+        const data = await response.json();
+        logContent.innerHTML = '';
+        if (!data.length) {
+          logContent.innerHTML = '<p class="small-label">Sin entradas recientes.</p>';
+          return;
+        }
+        data.forEach(entry => logContent.appendChild(createLogItem(entry)));
+      } catch (error) {
+        logContent.innerHTML = '<p class="small-label">No se puede cargar el log.</p>';
+      }
+    }
+
+    async function loadMacros() {
+      try {
+        const response = await fetch(macrosUrl);
+        if (!response.ok) throw new Error('No macros');
+        const data = await response.json();
+        macroList.innerHTML = '';
+        if (!data.length) {
+          macroList.innerHTML = '<p class="small-label">No hay macros guardadas.</p>';
+          return;
+        }
+        data.forEach(name => {
+          const card = document.createElement('div');
+          card.className = 'macro-card';
+          const label = document.createElement('span');
+          label.textContent = name;
+          const button = document.createElement('button');
+          button.textContent = 'Play';
+          button.addEventListener('click', () => playMacro(name, button));
+          card.appendChild(label);
+          card.appendChild(button);
+          macroList.appendChild(card);
+        });
+      } catch (error) {
+        macroList.innerHTML = '<p class="small-label">Error cargando macros.</p>';
+      }
+    }
+
+    async function callCommand(payload, button) {
+      if (button) {
+        button.disabled = true;
+        button.classList.add('loading');
+      }
+      try {
+        const response = await fetch(commandUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Error');
+        return data;
+      } catch (error) {
+        console.warn('Command error', error);
+        return null;
+      } finally {
+        if (button) {
+          button.disabled = false;
+          button.classList.remove('loading');
+        }
+      }
+    }
+
+    async function setMode(mode) {
+      const response = await callCommand({ action: 'set_mode', mode });
+      if (response) {
+        activeMode = mode;
+        updateModeToggle();
+      }
+    }
+
+    function updateModeToggle() {
+      const active = activeMode === 'API_MANUAL';
+      modeControl.classList.toggle('active', active);
+      modeLabel.textContent = activeMode;
+      modeToggle.querySelector('span').textContent = activeMode;
+    }
+
+    async function playMacro(name, button) {
+      playingMacro = true;
+      macroStatus.textContent = `Reproduciendo ${name}...`;
+      await callCommand({ action: 'play_macro', name }, button);
+      setTimeout(() => {
+        playingMacro = false;
+        macroStatus.textContent = '';
+      }, 2000);
+    }
+
+    function setButtons() {
+      modeToggle.addEventListener('click', () => setMode(activeMode === 'GESTURE' ? 'API_MANUAL' : 'GESTURE'));
+      sendJointsButton.addEventListener('click', () => callCommand({ action: 'set_joint_angles', angles: sliderSpec.map(spec => sliderState[spec.key]) }, sendJointsButton));
+      resetSlidersButton.addEventListener('click', () => {
+        sliderSpec.forEach(spec => sliderState[spec.key] = 0);
+        refreshSliderValues();
+      });
+      quickHomeButton.addEventListener('click', () => callCommand({ action: 'go_home' }, quickHomeButton));
+      openGripperButton.addEventListener('click', () => callCommand({ action: 'open_gripper' }, openGripperButton));
+      closeGripperButton.addEventListener('click', () => callCommand({ action: 'close_gripper' }, closeGripperButton));
+      zoneLeftButton.addEventListener('click', () => callCommand({ action: 'move_to_zone', zone: 'LEFT' }, zoneLeftButton));
+      zoneRightButton.addEventListener('click', () => callCommand({ action: 'move_to_zone', zone: 'RIGHT' }, zoneRightButton));
+      pickPlaceButton.addEventListener('click', () => callCommand({ action: 'pick_and_place' }, pickPlaceButton));
+      estopButton.addEventListener('click', () => callCommand({ action: 'emergency_stop' }, estopButton));
+      clearLogButton.addEventListener('click', () => { logContent.innerHTML = '<p class="small-label">Registro vaciado.</p>'; });
+    }
+
+    function init() {
+      buildSliders();
+      setButtons();
+      fetchState();
+      fetchLogs();
+      loadMacros();
+      setInterval(fetchState, 500);
+      setInterval(fetchLogs, 2000);
+      setInterval(loadMacros, 10000);
+    }
+
+    init();
+  </script>
+</body>
+</html>
