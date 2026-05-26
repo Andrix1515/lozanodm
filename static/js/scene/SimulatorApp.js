@@ -194,7 +194,16 @@ export class SimulatorApp {
     this.cameraCtrl.controls.enabled = false;
 
     if (hit === this.target.hitMesh || hit.parent?.userData?.isTarget) {
-      this._dragPlane.set(0, 1, 0, -this.target.position.y);
+      // Activar modo IK automáticamente cuando se arrastra el objetivo
+      this.ikEnabled = true;
+      const cb = document.getElementById("toggle-ik");
+      if (cb) cb.checked = true;
+
+      // Crear un plano de arrastre orientado hacia la cámara para permitir movimiento en 3D
+      const normal = new THREE.Vector3();
+      this.camera.getWorldDirection(normal).negate();
+      this._dragPlane.setFromNormalAndCoplanarPoint(normal, this.target.position);
+
       this.dragState = { type: "target" };
       this.target.setActive(true);
       return;
@@ -204,6 +213,11 @@ export class SimulatorApp {
       (h) => h.hitMesh === hit || h.hitMesh === hit.parent
     );
     if (handle) {
+      // Desactivar modo IK automáticamente al articular una junta directamente
+      this.ikEnabled = false;
+      const cb = document.getElementById("toggle-ik");
+      if (cb) cb.checked = false;
+
       handle.setHighlight(true);
       if (handle.beginDrag(this.raycaster)) {
         this.dragState = { type: "joint", handle };
@@ -227,6 +241,10 @@ export class SimulatorApp {
           y: this._dragPoint.y,
           z: this._dragPoint.z,
         };
+        // Resolver IK una única vez por cada cambio de posición del objetivo
+        if (this.ikEnabled) {
+          this._runIK();
+        }
       }
       return;
     }
@@ -285,19 +303,16 @@ export class SimulatorApp {
     requestAnimationFrame(this._animate);
     const dt = Math.min(this._clock.getDelta(), 0.05);
 
-    if (this.ikEnabled && this.dragState?.type !== "joint") {
-      this._runIK();
-    } else {
-      this._ikActive = false;
-      this.robot.endEffector.getWorldPosition(this._eeVec);
-      this._targetVec.set(
-        appState.targetPosition.x,
-        appState.targetPosition.y,
-        appState.targetPosition.z
-      );
-      this._ikDistance = this._eeVec.distanceTo(this._targetVec);
-      this._publishIkStatus();
-    }
+    // Calcular estado y distancias en cada frame sin ejecutar el solver continuamente
+    this._ikActive = this.ikEnabled && this.dragState?.type !== "joint";
+    this.robot.endEffector.getWorldPosition(this._eeVec);
+    this._targetVec.set(
+      appState.targetPosition.x,
+      appState.targetPosition.y,
+      appState.targetPosition.z
+    );
+    this._ikDistance = this._eeVec.distanceTo(this._targetVec);
+    this._publishIkStatus();
 
     if (this.robot.updateAnimation(dt)) {
       appState.setEndEffector(this.robot.getEndEffectorPosition());

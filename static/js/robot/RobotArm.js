@@ -64,15 +64,23 @@ export class RobotArm extends THREE.Group {
 
     this.add(visuals.baseFixed);
 
-    this.baseJoint = createPivot("y");
+    // base_joint: eje Z
+    this.baseJoint = createPivot(JOINT_AXES[0]);
     this.baseJoint.position.y = g.baseHeight * 0.52;
+    this.baseJoint.rotation.x = -Math.PI / 2; // Eje Z local apunta verticalmente (+Y mundo)
     this.add(this.baseJoint);
     this.jointGroups.push(this.baseJoint);
-    this.baseJoint.add(visuals.baseTurntable);
-    this.baseJoint.add(visuals.shoulderColumn);
 
-    this.shoulderJoint = createPivot("x");
-    this.shoulderJoint.position.set(0, g.shoulderRise, 0);
+    // Grupo de compensación visual para la base
+    const baseVisualsGroup = new THREE.Group();
+    baseVisualsGroup.rotation.x = Math.PI / 2;
+    baseVisualsGroup.add(visuals.baseTurntable);
+    baseVisualsGroup.add(visuals.shoulderColumn);
+    this.baseJoint.add(baseVisualsGroup);
+
+    // shoulder_joint: eje X local
+    this.shoulderJoint = createPivot(JOINT_AXES[1]);
+    this.shoulderJoint.position.set(0, 0, g.shoulderRise); // a lo largo del Z local del baseJoint
     this.baseJoint.add(this.shoulderJoint);
     this.jointGroups.push(this.shoulderJoint);
     this.shoulderJoint.add(visuals.shoulderHinge);
@@ -81,7 +89,8 @@ export class RobotArm extends THREE.Group {
     this.shoulderJoint.add(this.upperArmLink);
     this.upperArmLink.add(visuals.upperArm);
 
-    this.elbowJoint = createPivot("x");
+    // elbow_joint: eje X local
+    this.elbowJoint = createPivot(JOINT_AXES[2]);
     this.elbowJoint.position.z = g.upperArm;
     this.upperArmLink.add(this.elbowJoint);
     this.jointGroups.push(this.elbowJoint);
@@ -91,30 +100,45 @@ export class RobotArm extends THREE.Group {
     this.elbowJoint.add(this.forearmLink);
     this.forearmLink.add(visuals.forearm);
 
-    this.forearmRollJoint = createPivot("z");
+    // forearm_roll_joint: eje Y local
+    this.forearmRollJoint = createPivot(JOINT_AXES[3]);
     this.forearmRollJoint.position.z = forearmLen;
+    this.forearmRollJoint.rotation.x = Math.PI / 2; // Eje Y local a lo largo de la dirección Z del brazo
     this.forearmLink.add(this.forearmRollJoint);
     this.jointGroups.push(this.forearmRollJoint);
-    this.forearmRollJoint.add(visuals.forearmRollHousing);
+
+    const forearmRollVisualsGroup = new THREE.Group();
+    forearmRollVisualsGroup.rotation.x = -Math.PI / 2;
+    forearmRollVisualsGroup.add(visuals.forearmRollHousing);
+    this.forearmRollJoint.add(forearmRollVisualsGroup);
 
     this.wristSupport = new THREE.Group();
+    this.wristSupport.rotation.x = -Math.PI / 2;
     this.forearmRollJoint.add(this.wristSupport);
     this.wristSupport.add(visuals.wristSupport);
 
-    this.wristPitchJoint = createPivot("x");
+    // wrist_pitch_joint: eje X local
+    this.wristPitchJoint = createPivot(JOINT_AXES[4]);
     this.wristPitchJoint.position.z = g.forearm;
     this.wristSupport.add(this.wristPitchJoint);
     this.jointGroups.push(this.wristPitchJoint);
     this.wristPitchJoint.add(visuals.wristPitchAxle);
 
-    this.toolRollJoint = createPivot("z");
+    // tool_roll_joint: eje Y local
+    this.toolRollJoint = createPivot(JOINT_AXES[5]);
     this.toolRollJoint.position.z = g.wristLength;
+    this.toolRollJoint.rotation.x = Math.PI / 2; // Eje Y local a lo largo de la dirección Z de la herramienta
     this.wristPitchJoint.add(this.toolRollJoint);
     this.jointGroups.push(this.toolRollJoint);
-    this.toolRollJoint.add(visuals.toolRollHousing);
+
+    const toolRollVisualsGroup = new THREE.Group();
+    toolRollVisualsGroup.rotation.x = -Math.PI / 2;
+    toolRollVisualsGroup.add(visuals.toolRollHousing);
 
     this.gripperGroup = visuals.gripper;
-    this.toolRollJoint.add(this.gripperGroup);
+    toolRollVisualsGroup.add(this.gripperGroup);
+    this.toolRollJoint.add(toolRollVisualsGroup);
+
     this.fingerL = visuals.fingerL;
     this.fingerR = visuals.fingerR;
 

@@ -52,7 +52,21 @@ export function initJointControls() {
   });
 
   el("toggle-ik")?.addEventListener("change", (e) => {
-    if (simulator) simulator.ikEnabled = e.target.checked;
+    if (simulator) {
+      simulator.ikEnabled = e.target.checked;
+      if (e.target.checked) {
+        simulator._runIK();
+      }
+    }
+  });
+
+  el("btn-move-to-target")?.addEventListener("click", () => {
+    if (simulator) {
+      simulator.ikEnabled = true;
+      const cb = el("toggle-ik");
+      if (cb) cb.checked = true;
+      simulator._runIK();
+    }
   });
 }
 
@@ -86,6 +100,14 @@ function buildSliders() {
       el(`slider-val-${index}`).textContent = `${deg.toFixed(1)}°`;
       const angles = [...appState.jointAngles];
       angles[index] = degToRad(deg);
+
+      // Desactivar IK al mover sliders manualmente
+      if (simulator) {
+        simulator.ikEnabled = false;
+        const cb = el("toggle-ik");
+        if (cb) cb.checked = false;
+      }
+
       simulator?.setAngles(angles, ControlMode.MANUAL);
     });
   }

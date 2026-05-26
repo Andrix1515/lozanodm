@@ -47,6 +47,9 @@ export function solveCCD({
     for (let i = chain.length - 1; i >= 0; i -= 1) {
       const { group, axis, index } = chain[i];
       if (index >= ARM_DOF) continue;
+      
+      // Regla de IK: ignorar forearm_roll_joint (3) y tool_roll_joint (5) para posicionamiento básico
+      if (index === 3 || index === 5) continue;
 
       group.getWorldPosition(_jointWorld);
       endEffector.getWorldPosition(_effector);

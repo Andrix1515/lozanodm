@@ -36,10 +36,10 @@ export const JOINT_KEYS = [
 export const BACKEND_KEYS = [...JOINT_KEYS];
 
 /**
- * Ejes locales (simulador Y-up, brazo extendido en +Z):
- * base Y | hombro/codo X (elevación) | rolls Z | pitch muñeca X
+ * Ejes locales Niryo One corregidos:
+ * base Z | hombro/codo X | roll antebrazo Y | pitch muñeca X | roll herramienta Y
  */
-export const JOINT_AXES = ["y", "x", "x", "z", "x", "z"];
+export const JOINT_AXES = ["z", "x", "x", "y", "x", "y"];
 
 export const DEFAULT_JOINT_LIMITS = {
   joint1: [-175, 175],

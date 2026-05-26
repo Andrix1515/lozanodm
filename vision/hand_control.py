@@ -114,6 +114,14 @@ class HandJoystickApp:
         self._hand_y = 0.5
         self._position_filter_x = AdaptiveEMAFilter()
         self._position_filter_y = AdaptiveEMAFilter()
+        self._last_hand_seen_time = 0.0
+        self._pending_cell = (1, 1)
+        self._cell_stable_start = 0.0
+        self._stable_cell = (1, 1)
+        self._pending_fist = False
+        self._fist_stable_start = 0.0
+        self._last_frame_time = 0.0
+        self._last_processed_frame = None
         self._calibration_stage = None
         self._calibration_reference = None
         self._calibration_hold_start = 0.0
@@ -136,6 +144,7 @@ class HandJoystickApp:
         self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, config.FRAME_WIDTH)
         self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, config.FRAME_HEIGHT)
         self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+        self.cap.set(cv2.CAP_PROP_FPS, 15)
         self.running = True
         return True
 
@@ -182,10 +191,14 @@ class HandJoystickApp:
         frame = cv2.flip(frame, 1)
         h, w, _ = frame.shape
         rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        results = self.hands.process(rgb)
+        rgb_small = cv2.resize(
+            rgb, (config.PROCESSING_WIDTH, config.PROCESSING_HEIGHT), interpolation=cv2.INTER_LINEAR
+        )
+        results = self.hands.process(rgb_small)
 
         self.hand_detected = False
         if results.multi_hand_landmarks:
+            self._last_hand_seen_time = time.time()
             hand_lm = results.multi_hand_landmarks[0]
             self.hand_detected = True
             self.mp_draw.draw_landmarks(
@@ -207,8 +220,12 @@ class HandJoystickApp:
             if self._calibration_stage is None:
                 self._apply_robot_control()
         else:
-            self.active_cell = (1, 1)
+            self.active_cell = self._stable_cell
             if self._calibration_stage is None:
+                if time.time() - self._last_hand_seen_time > config.HAND_LOST_RESET_SECONDS:
+                    self._position_filter_x.reset()
+                    self._position_filter_y.reset()
+                    self._stable_cell = (1, 1)
                 self.status = "Esperando mano..."
             else:
                 self._update_calibration(None, None)
@@ -288,6 +305,28 @@ class HandJoystickApp:
             and abs(cy - 0.5) <= DEAD_ZONE_HALF_SIZE
         )
 
+    def _update_stable_cell(self, cell: tuple[int, int]) -> tuple[int, int]:
+        now = time.time()
+        if cell != self._pending_cell:
+            self._pending_cell = cell
+            self._cell_stable_start = now
+            return self._stable_cell
+
+        if now - self._cell_stable_start >= config.CELL_STABILITY_SECONDS:
+            self._stable_cell = cell
+        return self._stable_cell
+
+    def _stable_fist_state(self, fist_closed: bool) -> bool:
+        now = time.time()
+        if fist_closed != self._pending_fist:
+            self._pending_fist = fist_closed
+            self._fist_stable_start = now
+            return self._gripper_is_closed
+
+        if now - self._fist_stable_start >= config.FIST_STABILITY_SECONDS:
+            return fist_closed
+        return self._gripper_is_closed
+
     def _movement_scale(self, cx: float, cy: float) -> float:
         distance = math.hypot(cx - 0.5, cy - 0.5)
         max_distance = math.hypot(0.5, 0.5)
@@ -319,21 +358,24 @@ class HandJoystickApp:
 
         now = time.time()
         fist_closed = self.fingers <= 1
+        stable_fist = self._stable_fist_state(fist_closed)
 
-        if fist_closed != self._gripper_is_closed:
+        if stable_fist != self._gripper_is_closed:
             if now - self._last_grip_time >= config.GRIPPER_COOLDOWN:
-                if fist_closed:
+                if stable_fist:
                     self.robot.close_gripper()
                     self.gripper_state = "CERRADO"
                 else:
                     self.robot.open_gripper()
                     self.gripper_state = "ABIERTO"
-                self._gripper_is_closed = fist_closed
+                self._gripper_is_closed = stable_fist
                 self._last_grip_time = now
 
-        if fist_closed:
+        if stable_fist:
             self.status = f"Puño cerrado — gripper {self.gripper_state}"
             return
+
+        self.active_cell = self._update_stable_cell(self.active_cell)
 
         if self._is_in_dead_zone(self._hand_x, self._hand_y):
             self.status = "Zona muerta central"

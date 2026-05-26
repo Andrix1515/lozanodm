@@ -24,6 +24,11 @@ class AdaptiveEMAFilter:
         self._filtered_value: float | None = None
         self._history: Deque[float] = deque(maxlen=max_history)
 
+    def reset(self):
+        """Reinicia el estado del filtro a su estado inicial."""
+        self._filtered_value = None
+        self._history.clear()
+
     def update(self, value: float) -> float:
         """Actualiza el filtro con un nuevo valor y devuelve el valor filtrado."""
         if self._filtered_value is None:

@@ -23,7 +23,7 @@ class TestAPIServer(unittest.TestCase):
     def test_dashboard_route_returns_html(self):
         response = self.client.get("/")
         self.assertEqual(response.status_code, 200)
-        self.assertIn(b"Robot Dashboard", response.data)
+        self.assertIn(b"Dashboard NiryoOne", response.data)
 
     def test_api_state_returns_expected_fields(self):
         response = self.client.get("/api/state")

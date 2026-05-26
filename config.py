@@ -15,6 +15,17 @@ MOVEMENT_SPEED = 0.7  # Escala de velocidad de movimiento proporcional a la dist
 JOYSTICK_INTERVAL = 0.10
 GRIPPER_COOLDOWN = 0.35
 
+# Optimización de detección de cámara
+PROCESSING_WIDTH = 320
+PROCESSING_HEIGHT = 240
+CELL_STABILITY_SECONDS = 0.18
+FIST_STABILITY_SECONDS = 0.20
+HAND_LOST_RESET_SECONDS = 0.40
+
+# Conexión CoppeliaSim (ZMQ Remote API)
+REMOTE_API_HOST = "localhost"
+REMOTE_API_PORTS = [23000, 19997]
+
 # Rutas de joints (escena NiryoOne en CoppeliaSim)
 ARM_JOINT_NAMES = [
     "base_joint",
